@@ -7,10 +7,18 @@ import { EntityGenerator } from './generator/EntityGenerator';
 import { DatabaseConfigPanel } from './webview/DatabaseConfigPanel';
 import { MapperGenerator } from './generator/MapperGenerator';
 
+async function ensureDirectory(uri: vscode.Uri): Promise<void> {
+    try {
+        await vscode.workspace.fs.stat(uri);
+    } catch {
+        await vscode.workspace.fs.createDirectory(uri);
+    }
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	let disposable = vscode.commands.registerCommand('mybatis-cnb.generateEntity', async () => {
+	let disposable = vscode.commands.registerCommand('mybatis.generate', async () => {
 		// 使用 Webview 获取数据库配置
 		const config = await DatabaseConfigPanel.createOrShow();
 		if (!config) {
@@ -87,6 +95,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 			const rootPath = targetFolder[0].fsPath;
 
+			// Create base directories if they don't exist
+			const javaBasePath = `${rootPath}/src/main/java/${packageName.replace(/\./g, '/')}`;
+			const resourcesPath = `${rootPath}/src/main/resources`;
+			
+			// Ensure main directories exist
+			await ensureDirectory(vscode.Uri.file(`${javaBasePath}/entity`));
+			await ensureDirectory(vscode.Uri.file(`${javaBasePath}/mapper`));
+			await ensureDirectory(vscode.Uri.file(`${resourcesPath}/mapper`));
+
 			// 生成选中的所有表
 			for (const tableName of selectedTables) {
 				try {
@@ -97,9 +114,8 @@ export function activate(context: vscode.ExtensionContext) {
 						.join('');
 					
 					// 创建实体类文件
-					const entityPath = vscode.Uri.file(`${rootPath}/src/main/java/${packageName.replace(/\./g, '/')}/entity/${className}.java`);
+					const entityPath = vscode.Uri.file(`${javaBasePath}/entity/${className}.java`);
 					const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`);
-					await vscode.workspace.fs.createDirectory(vscode.Uri.file(entityPath.fsPath.substring(0, entityPath.fsPath.lastIndexOf('/'))));
 					await vscode.workspace.fs.writeFile(entityPath, Buffer.from(entityCode));
 					const entityDoc = await vscode.workspace.openTextDocument(entityPath);
 					await vscode.window.showTextDocument(entityDoc, { preview: false });
@@ -108,15 +124,13 @@ export function activate(context: vscode.ExtensionContext) {
 					const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName);
 					
 					// 创建 Mapper 接口文件
-					const mapperPath = vscode.Uri.file(`${rootPath}/src/main/java/${packageName.replace(/\./g, '/')}/mapper/${className}Mapper.java`);
-					await vscode.workspace.fs.createDirectory(vscode.Uri.file(mapperPath.fsPath.substring(0, mapperPath.fsPath.lastIndexOf('/'))));
+					const mapperPath = vscode.Uri.file(`${javaBasePath}/mapper/${className}Mapper.java`);
 					await vscode.workspace.fs.writeFile(mapperPath, Buffer.from(mapperCode.interface));
 					const mapperDoc = await vscode.workspace.openTextDocument(mapperPath);
 					await vscode.window.showTextDocument(mapperDoc, { preview: false });
 
 					// 创建 Mapper XML 文件
-					const xmlPath = vscode.Uri.file(`${rootPath}/src/main/resources/mapper/${className}Mapper.xml`);
-					await vscode.workspace.fs.createDirectory(vscode.Uri.file(xmlPath.fsPath.substring(0, xmlPath.fsPath.lastIndexOf('/'))));
+					const xmlPath = vscode.Uri.file(`${resourcesPath}/mapper/${className}Mapper.xml`);
 					await vscode.workspace.fs.writeFile(xmlPath, Buffer.from(mapperCode.xml));
 					const xmlDoc = await vscode.workspace.openTextDocument(xmlPath);
 					await vscode.window.showTextDocument(xmlDoc, { preview: false });
