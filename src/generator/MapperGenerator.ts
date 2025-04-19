@@ -25,8 +25,11 @@ public interface {{className}}Mapper {
 <mapper namespace="{{packageName}}.mapper.{{className}}Mapper">
     <resultMap id="BaseResultMap" type="{{packageName}}.entity.{{className}}">
         {{#each columns}}
-        <id column="{{columnName}}" property="{{fieldName}}" jdbcType="{{jdbcType}}" />{{#if isPrimaryKey}}{{else}}
-        <result column="{{columnName}}" property="{{fieldName}}" jdbcType="{{jdbcType}}" />{{/if}}
+        {{#if isPrimaryKey}}
+        <id column="{{columnName}}" property="{{fieldName}}" jdbcType="{{jdbcType}}" />
+        {{else}}
+        <result column="{{columnName}}" property="{{fieldName}}" jdbcType="{{jdbcType}}" />
+        {{/if}}
         {{/each}}
     </resultMap>
 
