@@ -40,13 +40,43 @@ None reported.
 
 ## Release Notes
 
-### 0.0.1
+### 0.0.6 (Current)
+- Added jump functionality between Mapper interfaces and XML files
+- Added CodeLens support for method navigation
+- Improved error handling and logging
+- Enhanced database connection management
+- Added file decorations for Mapper files
 
+### 0.0.5
+- Added support for custom templates
+- Improved code generation quality
+- Fixed MySQL connection issues
+
+### 0.0.4
+- Added interactive table selection
+- Improved package name handling
+- Better error messages
+
+### 0.0.3
+- Added XML implementation generator
+- Fixed file path issues on Windows
+- Improved Java type mapping
+
+### 0.0.2
+- Added MySQL database support
+- Improved error handling
+- Better progress indication
+
+### 0.0.1
 Initial release with basic features:
 - Database connection configuration
 - Entity class generation
 - Mapper interface generation
 - XML mapping file generation
+
+## Special Thanks
+
+Special thanks to my beloved wife Su Jiao (苏娇). Her unwavering support, understanding, and encouragement made this project possible. This extension is dedicated to her endless love and patience during its development.
 
 ## Contributing
 
