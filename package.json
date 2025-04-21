@@ -13,9 +13,7 @@
   ],
   "activationEvents": [
     "onLanguage:java",
-    "onLanguage:xml",
-    "onCommand:mybatis.generate",
-    "onCommand:mybatis.jump"
+    "onLanguage:xml"
   ],
   "main": "./out/extension.js",
   "contributes": {
