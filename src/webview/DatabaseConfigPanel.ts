@@ -1,56 +1,83 @@
 import * as vscode from 'vscode';
 import { DatabaseConfig } from '../config/DatabaseConfig';
+import { DatabaseService } from '../service/DatabaseService';
 
 export class DatabaseConfigPanel {
-    public static currentPanel: DatabaseConfigPanel | undefined;
+    private static currentPanel: DatabaseConfigPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
     private _disposables: vscode.Disposable[] = [];
-    private _resolveCallback: ((value: DatabaseConfig | undefined) => void) | undefined;
 
-    private constructor(panel: vscode.WebviewPanel, resolve: (value: DatabaseConfig | undefined) => void) {
+    private constructor(panel: vscode.WebviewPanel) {
         this._panel = panel;
-        this._resolveCallback = resolve;
-        this._panel.webview.html = this._getHtmlContent();
-        this._setWebviewMessageListener(this._panel.webview);
+        this._panel.webview.html = DatabaseConfigPanel.getHtmlContent();  // 修改这里，使用静态方法引用
+        this._panel.webview.onDidReceiveMessage(
+            async (message) => {
+                switch (message.command) {
+                    case 'testConnection':
+                        await this.testConnection(message.config);
+                        break;
+                    case 'submit':
+                        this.handleSubmit(message.config);
+                        break;
+                    case 'cancel':
+                        this._panel.dispose();
+                        break;
+                }
+            },
+            null,
+            this._disposables
+        );
     }
 
-    public static createOrShow(): Promise<DatabaseConfig | undefined> {
-        return new Promise((resolve) => {
-            const columnToShowIn = vscode.window.activeTextEditor
-                ? vscode.window.activeTextEditor.viewColumn
-                : undefined;
+    public static async createOrShow(): Promise<DatabaseConfig | undefined> {
+        const column = vscode.window.activeTextEditor
+            ? vscode.window.activeTextEditor.viewColumn
+            : undefined;
 
-            if (DatabaseConfigPanel.currentPanel) {
-                DatabaseConfigPanel.currentPanel._panel.reveal(columnToShowIn);
-            } else {
-                const panel = vscode.window.createWebviewPanel(
-                    'databaseConfig',
-                    'Database Configuration',
-                    columnToShowIn || vscode.ViewColumn.One,
-                    {
-                        enableScripts: true
-                    }
-                );
+        if (DatabaseConfigPanel.currentPanel) {
+            DatabaseConfigPanel.currentPanel._panel.reveal(column);
+            return;
+        }
 
-                DatabaseConfigPanel.currentPanel = new DatabaseConfigPanel(panel, resolve);
+        const panel = vscode.window.createWebviewPanel(
+            'databaseConfig',
+            'Database Configuration',
+            column || vscode.ViewColumn.One,
+            {
+                enableScripts: true
             }
+        );
 
-            DatabaseConfigPanel.currentPanel._panel.onDidDispose(
-                () => {
-                    DatabaseConfigPanel.currentPanel = undefined;
-                },
-                null,
-                DatabaseConfigPanel.currentPanel._disposables
+        DatabaseConfigPanel.currentPanel = new DatabaseConfigPanel(panel);
+        return new Promise((resolve) => {
+            // 处理配置提交
+            DatabaseConfigPanel.currentPanel!._panel.webview.onDidReceiveMessage(
+                message => {
+                    if (message.command === 'submit') {
+                        resolve(message.config);
+                        panel.dispose();
+                    } else if (message.command === 'cancel') {
+                        resolve(undefined);
+                        panel.dispose();
+                    }
+                }
             );
+
+            // 处理面板关闭
+            panel.onDidDispose(() => {
+                DatabaseConfigPanel.currentPanel = undefined;
+                resolve(undefined);
+            });
         });
     }
 
-    private _getHtmlContent(): string {
+    private static getHtmlContent() {
         return `<!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Database Configuration</title>
             <style>
                 body {
                     padding: 20px;
@@ -72,9 +99,9 @@ export class DatabaseConfigPanel {
                     color: var(--vscode-input-foreground);
                 }
                 .button-group {
-                    margin-top: 20px;
                     display: flex;
                     gap: 10px;
+                    margin-top: 20px;
                 }
                 button {
                     padding: 8px 16px;
@@ -85,6 +112,19 @@ export class DatabaseConfigPanel {
                 }
                 button:hover {
                     background: var(--vscode-button-hoverBackground);
+                }
+                #testResult {
+                    margin-top: 10px;
+                    padding: 10px;
+                    display: none;
+                }
+                .success {
+                    background: #2ea043;
+                    color: white;
+                }
+                .error {
+                    background: #f85149;
+                    color: white;
                 }
             </style>
         </head>
@@ -110,13 +150,32 @@ export class DatabaseConfigPanel {
                     <label for="database">Database:</label>
                     <input type="text" id="database" required>
                 </div>
+                <div id="testResult"></div>
                 <div class="button-group">
+                    <button type="button" onclick="testConnection()">Test Connection</button>
                     <button type="submit">Connect</button>
                     <button type="button" onclick="cancel()">Cancel</button>
                 </div>
             </form>
             <script>
                 const vscode = acquireVsCodeApi();
+                
+                async function testConnection() {
+                    const config = {
+                        host: document.getElementById('host').value,
+                        port: parseInt(document.getElementById('port').value),
+                        user: document.getElementById('user').value,
+                        password: document.getElementById('password').value,
+                        database: document.getElementById('database').value
+                    };
+                    
+                    const resultDiv = document.getElementById('testResult');
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = 'Testing connection...';
+                    resultDiv.className = '';
+                    
+                    vscode.postMessage({ command: 'testConnection', config });
+                }
                 
                 document.getElementById('configForm').addEventListener('submit', (e) => {
                     e.preventDefault();
@@ -133,41 +192,48 @@ export class DatabaseConfigPanel {
                 function cancel() {
                     vscode.postMessage({ command: 'cancel' });
                 }
+
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    const resultDiv = document.getElementById('testResult');
+                    
+                    if (message.command === 'testResult') {
+                        resultDiv.style.display = 'block';
+                        if (message.success) {
+                            resultDiv.className = 'success';
+                            resultDiv.textContent = 'Connection successful!';
+                        } else {
+                            resultDiv.className = 'error';
+                            resultDiv.textContent = 'Connection failed: ' + message.error;
+                        }
+                    }
+                });
             </script>
         </body>
         </html>`;
     }
 
-    private _setWebviewMessageListener(webview: vscode.Webview) {
-        webview.onDidReceiveMessage(
-            async message => {
-                console.log('Received message:', message); // 添加日志
-                switch (message.command) {
-                    case 'submit':
-                        console.log('Processing submit with config:', message.config); // 添加日志
-                        // 验证配置
-                        if (!message.config || !message.config.host || !message.config.port || 
-                            !message.config.user || !message.config.password || !message.config.database) {
-                            vscode.window.showErrorMessage('Please fill in all database configuration fields');
-                            return;
-                        }
-                        if (this._resolveCallback) {
-                            this._resolveCallback(message.config);
-                        }
-                        this.dispose();
-                        break;
-                    case 'cancel':
-                        console.log('Processing cancel'); // 添加日志
-                        if (this._resolveCallback) {
-                            this._resolveCallback(undefined);
-                        }
-                        this.dispose();
-                        break;
-                }
-            },
-            undefined,
-            this._disposables
-        );
+    private async testConnection(config: DatabaseConfig) {
+        const dbService = new DatabaseService();
+        try {
+            await dbService.connect(config);
+            await this._panel.webview.postMessage({
+                command: 'testResult',
+                success: true
+            });
+        } catch (error) {
+            await this._panel.webview.postMessage({
+                command: 'testResult',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        } finally {
+            await dbService.disconnect();
+        }
+    }
+
+    private handleSubmit(config: DatabaseConfig) {
+        // 原有的提交处理逻辑
     }
 
     public dispose() {
