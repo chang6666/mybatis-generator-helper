@@ -124,8 +124,6 @@ export function activate(context: vscode.ExtensionContext) {
 						const entityPath = vscode.Uri.file(`${javaBasePath}/entity/${className}.java`);
 						const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`);
 						await vscode.workspace.fs.writeFile(entityPath, Buffer.from(entityCode));
-						const entityDoc = await vscode.workspace.openTextDocument(entityPath);
-						await vscode.window.showTextDocument(entityDoc, { preview: false });
 
 						// 生成 Mapper 接口和 XML
 						const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName);
@@ -133,14 +131,10 @@ export function activate(context: vscode.ExtensionContext) {
 						// 创建 Mapper 接口文件
 						const mapperPath = vscode.Uri.file(`${javaBasePath}/mapper/${className}Mapper.java`);
 						await vscode.workspace.fs.writeFile(mapperPath, Buffer.from(mapperCode.interface));
-						const mapperDoc = await vscode.workspace.openTextDocument(mapperPath);
-						await vscode.window.showTextDocument(mapperDoc, { preview: false });
 
 						// 创建 Mapper XML 文件
 						const xmlPath = vscode.Uri.file(`${resourcesPath}/mapper/${className}Mapper.xml`);
 						await vscode.workspace.fs.writeFile(xmlPath, Buffer.from(mapperCode.xml));
-						const xmlDoc = await vscode.workspace.openTextDocument(xmlPath);
-						await vscode.window.showTextDocument(xmlDoc, { preview: false });
 
 						vscode.window.showInformationMessage(`Generated files for table ${tableName}`);
 					} catch (error: unknown) {
@@ -148,7 +142,15 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 
-				vscode.window.showInformationMessage('Code generation completed!');
+				// 在所有文件生成完成后显示一个总结消息
+				vscode.window.showInformationMessage(
+					`Successfully generated files for ${selectedTables.length} table(s) in ${packageName}`,
+					'Show in Explorer'
+				).then(selection => {
+					if (selection === 'Show in Explorer') {
+						vscode.commands.executeCommand('revealFileInOS', targetFolder[0]);
+					}
+				});
 			} finally {
 				await dbService.disconnect();
 			}

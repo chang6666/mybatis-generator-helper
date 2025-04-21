@@ -9,17 +9,32 @@ import lombok.Data;
 {{#if hasDate}}
 import java.util.Date;
 {{/if}}
+{{#if hasBigDecimal}}
+import java.math.BigDecimal;
+{{/if}}
 
 /**
+{{#if tableComment}}
  * {{tableComment}}
+{{else}}
+ * {{className}} entity
+{{/if}}
  */
 @Data
 public class {{className}} {
     {{#each columns}}
     /**
+    {{#if columnComment}}
      * {{columnComment}}
+    {{else}}
+     * {{columnName}}
+    {{/if}}
+    {{#if isPrimaryKey}}
+     * @Primary Key
+    {{/if}}
      */
     private {{javaType}} {{fieldName}};
+
     {{/each}}
 }
 `;
@@ -41,15 +56,22 @@ public class {{className}} {
         
         const hasDate = tableInfo.columns.some(col => 
             ['datetime', 'timestamp'].includes(col.dataType.toLowerCase()));
+        
+        const hasBigDecimal = tableInfo.columns.some(col => 
+            ['decimal'].includes(col.dataType.toLowerCase()));
 
         return compiled({
             packageName,
             className: this.toClassName(tableInfo.tableName),
+            tableComment: tableInfo.tableComment?.trim(),
             hasDate,
+            hasBigDecimal,
             columns: tableInfo.columns.map(col => ({
-                columnComment: col.columnComment || col.columnName,
+                columnName: col.columnName,
+                columnComment: col.columnComment?.trim(),
                 javaType: this.typeMapping[col.dataType.toLowerCase()] || 'String',
-                fieldName: this.toCamelCase(col.columnName)
+                fieldName: this.toCamelCase(col.columnName),
+                isPrimaryKey: col.isPrimaryKey
             }))
         });
     }

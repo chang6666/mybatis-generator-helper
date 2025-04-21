@@ -2,7 +2,7 @@
   "name": "mybatis-generator-helper",
   "displayName": "mybatis-generator-helper",
   "description": "mybatis generator插件",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "changningbo",
   "icon": "images/icon.png",
   "engines": {
