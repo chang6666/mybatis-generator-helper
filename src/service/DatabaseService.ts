@@ -19,12 +19,10 @@ export class DatabaseService {
     private connection: mysql.PoolConnection | null = null;
 
     static async initializePool(config: DatabaseConfig): Promise<void> {
-        // Close existing pool if it exists
         if (this.pool) {
             await this.closePool();
         }
         
-        // Create new pool
         this.pool = mysql.createPool({
             host: config.host,
             port: config.port,
@@ -32,13 +30,19 @@ export class DatabaseService {
             password: config.password,
             database: config.database,
             waitForConnections: true,
-            connectionLimit: 10,
-            maxIdle: 10,
-            idleTimeout: 60000,
-            queueLimit: 0
+            // 减少最大连接数
+            connectionLimit: 5,
+            // 减少空闲连接数
+            maxIdle: 3,
+            // 减少空闲超时时间
+            idleTimeout: 30000,
+            // 启用连接复用
+            enableKeepAlive: true,
+            keepAliveInitialDelay: 30000,
+            // 添加资源限制
+            queueLimit: 5
         });
 
-        // Test the pool by getting and immediately releasing a connection
         try {
             const conn = await this.pool.getConnection();
             conn.release();

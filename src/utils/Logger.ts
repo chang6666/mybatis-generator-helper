@@ -2,8 +2,15 @@ import * as vscode from 'vscode';
 
 export class Logger {
     private static outputChannel: vscode.OutputChannel;
-    private static readonly maxLogSize = 1000; // 限制日志条目数
-    private static logEntries: string[] = [];
+    // 减少日志条目限制
+    private static readonly maxLogSize = 500;
+    // 使用循环缓冲区来存储日志
+    private static logBuffer: string[] = [];
+    private static currentIndex = 0;
+
+    static {
+        this.outputChannel = vscode.window.createOutputChannel('MyBatis Generator');
+    }
 
     static info(message: string) {
         this.addLogEntry(`[INFO] ${message}`);
@@ -13,21 +20,34 @@ export class Logger {
         const message = error instanceof Error ? error.message : error;
         this.addLogEntry(`[ERROR] ${message}`);
         if (error instanceof Error && error.stack) {
-            this.addLogEntry(error.stack);
+            // 只保存堆栈的前几行，避免过多内存使用
+            const stackLines = error.stack.split('\n').slice(0, 5).join('\n');
+            this.addLogEntry(stackLines);
         }
-        vscode.window.showErrorMessage(message);
     }
 
     private static addLogEntry(entry: string) {
-        this.logEntries.push(entry);
-        if (this.logEntries.length > this.maxLogSize) {
-            this.logEntries.shift(); // 移除最旧的日志
-        }
+        // 使用循环缓冲区
+        this.logBuffer[this.currentIndex] = entry;
+        this.currentIndex = (this.currentIndex + 1) % this.maxLogSize;
         this.outputChannel.appendLine(entry);
+
+        // 当日志量较大时，清理输出通道
+        if (this.currentIndex % 100 === 0) {
+            this.outputChannel.clear();
+            this.logBuffer.forEach(line => {
+                if (line) this.outputChannel.appendLine(line);
+            });
+        }
     }
 
     static clear() {
-        this.logEntries = [];
+        this.logBuffer = [];
+        this.currentIndex = 0;
         this.outputChannel.clear();
+    }
+
+    static dispose() {
+        this.outputChannel.dispose();
     }
 }

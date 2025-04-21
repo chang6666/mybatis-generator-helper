@@ -288,6 +288,17 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeWorkspaceFolders(async () => {
 			await DatabaseService.closePool();
 			Logger.clear();
+			TemplateManager.clearCache();
+		})
+	);
+
+	// 添加配置变化监听
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration(async (e) => {
+			if (e.affectsConfiguration('mybatisGeneratorHelper')) {
+				TemplateManager.clearCache();
+				await DatabaseService.closePool();
+			}
 		})
 	);
 
@@ -297,6 +308,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {
-	return DatabaseService.closePool();
+export async function deactivate() {
+	// 清理所有资源
+	await DatabaseService.closePool();
+	Logger.dispose();
+	TemplateManager.clearCache();
 }
