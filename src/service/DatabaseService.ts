@@ -16,30 +16,47 @@ export interface TableInfo {
 
 export class DatabaseService {
     private static pool: mysql.Pool | null = null;
-    
+    private connection: mysql.PoolConnection | null = null;
+
     static async initializePool(config: DatabaseConfig): Promise<void> {
-        if (!this.pool) {
-            this.pool = mysql.createPool({
-                host: config.host,
-                port: config.port,
-                user: config.user,
-                password: config.password,
-                database: config.database,
-                waitForConnections: true,
-                connectionLimit: 10,
-                maxIdle: 10,
-                idleTimeout: 60000,
-                queueLimit: 0
-            });
+        // Close existing pool if it exists
+        if (this.pool) {
+            await this.closePool();
+        }
+        
+        // Create new pool
+        this.pool = mysql.createPool({
+            host: config.host,
+            port: config.port,
+            user: config.user,
+            password: config.password,
+            database: config.database,
+            waitForConnections: true,
+            connectionLimit: 10,
+            maxIdle: 10,
+            idleTimeout: 60000,
+            queueLimit: 0
+        });
+
+        // Test the pool by getting and immediately releasing a connection
+        try {
+            const conn = await this.pool.getConnection();
+            conn.release();
+        } catch (error) {
+            await this.closePool();
+            throw error;
         }
     }
 
-    private connection: mysql.PoolConnection | null = null;
-
     async connect(): Promise<void> {
         if (!DatabaseService.pool) {
-            throw new Error('Pool not initialized');
+            throw new Error('Pool not initialized. Please provide database configuration.');
         }
+        
+        if (this.connection) {
+            await this.disconnect();
+        }
+        
         this.connection = await DatabaseService.pool.getConnection();
     }
 

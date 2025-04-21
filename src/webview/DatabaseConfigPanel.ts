@@ -10,7 +10,7 @@ export class DatabaseConfigPanel {
     private static readonly panelData = new WeakMap<vscode.WebviewPanel, any>();
 
     private readonly _panel: vscode.WebviewPanel;
-    private _disposables: vscode.Disposable[] = [];
+    private readonly _disposables: vscode.Disposable[] = [];
 
     private constructor(panel: vscode.WebviewPanel) {
         this._panel = panel;
@@ -22,7 +22,7 @@ export class DatabaseConfigPanel {
                         await this.testConnection(message.config);
                         break;
                     case 'submit':
-                        this.handleSubmit(message.config);
+                        await this.handleSubmit(message.config);
                         break;
                     case 'cancel':
                         this._panel.dispose();
@@ -54,25 +54,12 @@ export class DatabaseConfigPanel {
         );
 
         DatabaseConfigPanel.currentPanel = new DatabaseConfigPanel(panel);
+        
         return new Promise((resolve) => {
-            // 处理配置提交
-            DatabaseConfigPanel.currentPanel!._panel.webview.onDidReceiveMessage(
-                message => {
-                    if (message.command === 'submit') {
-                        resolve(message.config);
-                        panel.dispose();
-                    } else if (message.command === 'cancel') {
-                        resolve(undefined);
-                        panel.dispose();
-                    }
-                }
-            );
-
-            // 面板关闭时清理资源
             panel.onDidDispose(() => {
                 DatabaseConfigPanel.currentPanel = undefined;
-                DatabaseConfigPanel.panelData.delete(panel);
-                resolve(undefined);
+                const config = DatabaseConfigPanel.panelData.get(panel);
+                resolve(config);
             });
         });
     }
@@ -220,13 +207,17 @@ export class DatabaseConfigPanel {
     }
 
     private async testConnection(config: DatabaseConfig) {
-        const dbService = new DatabaseService();
         try {
+            await DatabaseService.initializePool(config);
+            const dbService = new DatabaseService();
             await dbService.connect();
+            
             await this._panel.webview.postMessage({
                 command: 'testResult',
                 success: true
             });
+            
+            await dbService.disconnect();
         } catch (error) {
             await this._panel.webview.postMessage({
                 command: 'testResult',
@@ -234,12 +225,32 @@ export class DatabaseConfigPanel {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         } finally {
-            await dbService.disconnect();
+            await DatabaseService.closePool();
         }
     }
 
-    private handleSubmit(config: DatabaseConfig) {
-        // 原有的提交处理逻辑
+    private async handleSubmit(config: DatabaseConfig) {
+        try {
+            // 初始化连接池
+            await DatabaseService.initializePool(config);
+            
+            // 测试连接
+            const dbService = new DatabaseService();
+            await dbService.connect();
+            await dbService.disconnect();
+
+            // 如果连接成功，发送配置并关闭面板
+            DatabaseConfigPanel.panelData.set(this._panel, config);
+            this._panel.dispose();
+        } catch (error) {
+            await this._panel.webview.postMessage({
+                command: 'testResult',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        } finally {
+            await DatabaseService.closePool();
+        }
     }
 
     public dispose() {
