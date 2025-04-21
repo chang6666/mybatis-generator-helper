@@ -9,6 +9,7 @@ import { MapperGenerator } from './generator/MapperGenerator';
 import { MapperJumper } from './jump/MapperJumper';
 import { MapperDecorationProvider } from './decoration/MapperDecorationProvider';
 import { Logger } from './utils/Logger';
+import { TemplateManager } from './generator/TemplateManager';
 
 async function ensureDirectory(uri: vscode.Uri): Promise<void> {
     try {
