@@ -8,6 +8,7 @@ import { DatabaseConfigPanel } from './webview/DatabaseConfigPanel';
 import { MapperGenerator } from './generator/MapperGenerator';
 import { MapperJumper } from './jump/MapperJumper';
 import { MapperDecorationProvider } from './decoration/MapperDecorationProvider';
+import { Logger } from './utils/Logger';
 
 async function ensureDirectory(uri: vscode.Uri): Promise<void> {
     try {
@@ -38,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let dbService: DatabaseService | undefined;
 		try {
 			dbService = new DatabaseService();
-			await dbService.connect(config);
+			await dbService.connect();
 			
 			// 获取所有表
 			const tables = await dbService.getAllTables();
@@ -276,10 +277,20 @@ export function activate(context: vscode.ExtensionContext) {
 	// 注册装饰器提供程序
 	MapperDecorationProvider.register(context);
 
+	// 注册工作区关闭事件处理
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+			await DatabaseService.closePool();
+			Logger.clear();
+		})
+	);
+
 	context.subscriptions.push(generateDisposable);
 	context.subscriptions.push(jumpDisposable);
 	context.subscriptions.push(createImplementationDisposable);
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	return DatabaseService.closePool();
+}

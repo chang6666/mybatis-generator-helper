@@ -3,7 +3,12 @@ import { DatabaseConfig } from '../config/DatabaseConfig';
 import { DatabaseService } from '../service/DatabaseService';
 
 export class DatabaseConfigPanel {
+    private static readonly viewType = 'databaseConfig';
     private static currentPanel: DatabaseConfigPanel | undefined;
+    
+    // 使用 WeakMap 存储面板实例数据
+    private static readonly panelData = new WeakMap<vscode.WebviewPanel, any>();
+
     private readonly _panel: vscode.WebviewPanel;
     private _disposables: vscode.Disposable[] = [];
 
@@ -30,21 +35,21 @@ export class DatabaseConfigPanel {
     }
 
     public static async createOrShow(): Promise<DatabaseConfig | undefined> {
-        const column = vscode.window.activeTextEditor
-            ? vscode.window.activeTextEditor.viewColumn
-            : undefined;
+        const column = vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
 
         if (DatabaseConfigPanel.currentPanel) {
             DatabaseConfigPanel.currentPanel._panel.reveal(column);
             return;
         }
 
+        // 创建新面板时立即注册清理逻辑
         const panel = vscode.window.createWebviewPanel(
-            'databaseConfig',
+            this.viewType,
             'Database Configuration',
-            column || vscode.ViewColumn.One,
+            column,
             {
-                enableScripts: true
+                enableScripts: true,
+                retainContextWhenHidden: false // 隐藏时释放内存
             }
         );
 
@@ -63,9 +68,10 @@ export class DatabaseConfigPanel {
                 }
             );
 
-            // 处理面板关闭
+            // 面板关闭时清理资源
             panel.onDidDispose(() => {
                 DatabaseConfigPanel.currentPanel = undefined;
+                DatabaseConfigPanel.panelData.delete(panel);
                 resolve(undefined);
             });
         });
@@ -216,7 +222,7 @@ export class DatabaseConfigPanel {
     private async testConnection(config: DatabaseConfig) {
         const dbService = new DatabaseService();
         try {
-            await dbService.connect(config);
+            await dbService.connect();
             await this._panel.webview.postMessage({
                 command: 'testResult',
                 success: true

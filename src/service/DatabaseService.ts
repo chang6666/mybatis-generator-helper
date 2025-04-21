@@ -15,16 +15,32 @@ export interface TableInfo {
 }
 
 export class DatabaseService {
-    private connection: mysql.Connection | null = null;
+    private static pool: mysql.Pool | null = null;
+    
+    static async initializePool(config: DatabaseConfig): Promise<void> {
+        if (!this.pool) {
+            this.pool = mysql.createPool({
+                host: config.host,
+                port: config.port,
+                user: config.user,
+                password: config.password,
+                database: config.database,
+                waitForConnections: true,
+                connectionLimit: 10,
+                maxIdle: 10,
+                idleTimeout: 60000,
+                queueLimit: 0
+            });
+        }
+    }
 
-    async connect(config: DatabaseConfig): Promise<void> {
-        this.connection = await mysql.createConnection({
-            host: config.host,
-            port: config.port,
-            user: config.user,
-            password: config.password,
-            database: config.database
-        });
+    private connection: mysql.PoolConnection | null = null;
+
+    async connect(): Promise<void> {
+        if (!DatabaseService.pool) {
+            throw new Error('Pool not initialized');
+        }
+        this.connection = await DatabaseService.pool.getConnection();
     }
 
     async getTableInfo(tableName: string): Promise<TableInfo> {
@@ -78,8 +94,15 @@ export class DatabaseService {
 
     async disconnect(): Promise<void> {
         if (this.connection) {
-            await this.connection.end();
+            this.connection.release();
             this.connection = null;
+        }
+    }
+
+    static async closePool(): Promise<void> {
+        if (this.pool) {
+            await this.pool.end();
+            this.pool = null;
         }
     }
 }

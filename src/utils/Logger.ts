@@ -2,22 +2,32 @@ import * as vscode from 'vscode';
 
 export class Logger {
     private static outputChannel: vscode.OutputChannel;
-
-    static init(context: vscode.ExtensionContext) {
-        this.outputChannel = vscode.window.createOutputChannel('MyBatis Generator');
-        context.subscriptions.push(this.outputChannel);
-    }
+    private static readonly maxLogSize = 1000; // 限制日志条目数
+    private static logEntries: string[] = [];
 
     static info(message: string) {
-        this.outputChannel.appendLine(`[INFO] ${message}`);
+        this.addLogEntry(`[INFO] ${message}`);
     }
 
     static error(error: Error | string) {
         const message = error instanceof Error ? error.message : error;
-        this.outputChannel.appendLine(`[ERROR] ${message}`);
+        this.addLogEntry(`[ERROR] ${message}`);
         if (error instanceof Error && error.stack) {
-            this.outputChannel.appendLine(error.stack);
+            this.addLogEntry(error.stack);
         }
         vscode.window.showErrorMessage(message);
+    }
+
+    private static addLogEntry(entry: string) {
+        this.logEntries.push(entry);
+        if (this.logEntries.length > this.maxLogSize) {
+            this.logEntries.shift(); // 移除最旧的日志
+        }
+        this.outputChannel.appendLine(entry);
+    }
+
+    static clear() {
+        this.logEntries = [];
+        this.outputChannel.clear();
     }
 }

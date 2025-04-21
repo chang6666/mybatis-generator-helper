@@ -29,7 +29,7 @@ export class GeneratorService {
     private static async generateForTable(table: string, config: DatabaseConfig) {
         const dbService = new DatabaseService();
         try {
-            await dbService.connect(config);
+            await dbService.connect();
             const tableInfo = await dbService.getTableInfo(table);
             // Add your generation logic here using EntityGenerator and MapperGenerator
         } finally {
