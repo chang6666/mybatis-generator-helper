@@ -6,6 +6,8 @@ import { DatabaseService } from './service/DatabaseService';
 import { EntityGenerator } from './generator/EntityGenerator';
 import { DatabaseConfigPanel } from './webview/DatabaseConfigPanel';
 import { MapperGenerator } from './generator/MapperGenerator';
+import { MapperJumper } from './jump/MapperJumper';
+import { MapperDecorationProvider } from './decoration/MapperDecorationProvider';
 
 async function ensureDirectory(uri: vscode.Uri): Promise<void> {
     try {
@@ -18,7 +20,7 @@ async function ensureDirectory(uri: vscode.Uri): Promise<void> {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	let disposable = vscode.commands.registerCommand('mybatis.generate', async () => {
+	let generateDisposable = vscode.commands.registerCommand('mybatis.generate', async () => {
 		// 使用 Webview 获取数据库配置
 		const config = await DatabaseConfigPanel.createOrShow();
 		if (!config) {
@@ -149,7 +151,134 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	context.subscriptions.push(disposable);
+	let jumpDisposable = vscode.commands.registerCommand('mybatis.jump', async () => {
+		await MapperJumper.jump();
+	});
+
+	// 注册创建XML实现的命令
+	let createImplementationDisposable = vscode.commands.registerCommand('mybatis.createImplementation', async (methodName: string, interfaceName: string) => {
+		// 如果没有活动编辑器，尝试通过接口名称查找文件
+		let document: vscode.TextDocument;
+		let text: string;
+		
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			document = editor.document;
+			text = document.getText();
+		} else {
+			// 通过接口名称查找Java文件
+			const files = await vscode.workspace.findFiles(`**/${interfaceName}.java`);
+			if (files.length === 0) {
+				vscode.window.showErrorMessage(`Interface file ${interfaceName} not found.`);
+				return;
+			}
+			document = await vscode.workspace.openTextDocument(files[0]);
+			text = document.getText();
+		}
+
+		// 查找对应的XML文件
+		const xmlFiles = await vscode.workspace.findFiles(`**/${interfaceName}.xml`);
+		if (xmlFiles.length === 0) {
+			vscode.window.showErrorMessage(`XML file for ${interfaceName} not found.`);
+			return;
+		}
+
+		// 打开XML文件
+		const xmlDocument = await vscode.workspace.openTextDocument(xmlFiles[0]);
+		const xmlEditor = await vscode.window.showTextDocument(xmlDocument);
+
+		// 在Java文件中查找方法定义
+		const methodRegex = new RegExp(`\\s*(\\w+[\\s\\w<>,]*?)\\s+${methodName}\\s*\\(([^)]*)\\)\\s*;`);
+		const methodMatch = text.match(methodRegex);
+		if (!methodMatch) {
+			vscode.window.showErrorMessage(`Method ${methodName} not found in interface.`);
+			return;
+		}
+
+		const returnType = methodMatch[1].trim();
+		const parameters = methodMatch[2].trim();
+
+		// 查找插入位置
+		const xmlContent = xmlDocument.getText();
+		let insertPosition: vscode.Position;
+		
+		// 首先尝试查找最后一个SQL语句
+		const lastSqlMatch = xmlContent.match(/<\/(select|insert|update|delete)>[^<]*$/m);
+		
+		if (lastSqlMatch) {
+			// 如果找到最后一个SQL语句，在其后插入
+			insertPosition = xmlDocument.positionAt(lastSqlMatch.index! + lastSqlMatch[0].length);
+		} else {
+			// 如果没有找到SQL语句，查找</mapper>标签
+			const mapperEndMatch = xmlContent.match(/<\/mapper>\s*$/);
+			if (!mapperEndMatch) {
+				vscode.window.showErrorMessage('Invalid XML file: missing </mapper> tag');
+				return;
+			}
+			// 在</mapper>标签前插入
+			insertPosition = xmlDocument.positionAt(mapperEndMatch.index!);
+		}
+
+		const baseIndent = '    ';
+		const sqlIndent = '        ';
+		
+		// 根据方法名和返回类型决定SQL类型
+		let xmlTemplate = '\n';
+		xmlTemplate += `${baseIndent}<!-- ${methodName} -->\n`;
+
+		// 判断SQL类型
+		if (methodName.startsWith('insert') || methodName.startsWith('save') || methodName.startsWith('add')) {
+			xmlTemplate += `${baseIndent}<insert id="${methodName}"${parameters ? `\n${sqlIndent}parameterType="${parameters.split(' ')[0]}"` : ''}>\n`;
+			xmlTemplate += `${sqlIndent}INSERT INTO your_table_name\n`;
+			xmlTemplate += `${sqlIndent}(\n`;
+			xmlTemplate += `${sqlIndent}    your_column1, your_column2\n`;
+			xmlTemplate += `${sqlIndent})\n`;
+			xmlTemplate += `${sqlIndent}VALUES\n`;
+			xmlTemplate += `${sqlIndent}(\n`;
+			xmlTemplate += `${sqlIndent}    #{yourValue1}, #{yourValue2}\n`;
+			xmlTemplate += `${sqlIndent})\n`;
+			xmlTemplate += `${baseIndent}</insert>\n`;
+		} else if (methodName.startsWith('update') || methodName.startsWith('modify')) {
+			xmlTemplate += `${baseIndent}<update id="${methodName}"${parameters ? `\n${sqlIndent}parameterType="${parameters.split(' ')[0]}"` : ''}>\n`;
+			xmlTemplate += `${sqlIndent}UPDATE your_table_name\n`;
+			xmlTemplate += `${sqlIndent}SET your_column = #{yourValue}\n`;
+			xmlTemplate += `${sqlIndent}WHERE your_condition = #{yourParameter}\n`;
+			xmlTemplate += `${baseIndent}</update>\n`;
+		} else if (methodName.startsWith('delete') || methodName.startsWith('remove')) {
+			xmlTemplate += `${baseIndent}<delete id="${methodName}"${parameters ? `\n${sqlIndent}parameterType="${parameters.split(' ')[0]}"` : ''}>\n`;
+			xmlTemplate += `${sqlIndent}DELETE FROM your_table_name\n`;
+			xmlTemplate += `${sqlIndent}WHERE your_condition = #{yourParameter}\n`;
+			xmlTemplate += `${baseIndent}</delete>\n`;
+		} else if (returnType.includes('List')) {
+			xmlTemplate += `${baseIndent}<select id="${methodName}"${parameters ? `\n${sqlIndent}parameterType="${parameters.split(' ')[0]}"` : ''}\n${sqlIndent}resultMap="BaseResultMap">\n`;
+			xmlTemplate += `${sqlIndent}SELECT\n`;
+			xmlTemplate += `${sqlIndent}<include refid="Base_Column_List" />\n`;
+			xmlTemplate += `${sqlIndent}FROM your_table_name\n`;
+			xmlTemplate += `${sqlIndent}WHERE your_condition = #{yourParameter}\n`;
+			xmlTemplate += `${baseIndent}</select>\n`;
+		} else {
+			xmlTemplate += `${baseIndent}<select id="${methodName}"${parameters ? `\n${sqlIndent}parameterType="${parameters.split(' ')[0]}"` : ''}\n${sqlIndent}resultMap="BaseResultMap">\n`;
+			xmlTemplate += `${sqlIndent}SELECT\n`;
+			xmlTemplate += `${sqlIndent}<include refid="Base_Column_List" />\n`;
+			xmlTemplate += `${sqlIndent}FROM your_table_name\n`;
+			xmlTemplate += `${sqlIndent}WHERE your_condition = #{yourParameter}\n`;
+			xmlTemplate += `${baseIndent}</select>\n`;
+		}
+
+		// 插入新的SQL
+		await xmlEditor.edit(editBuilder => {
+			editBuilder.insert(insertPosition, xmlTemplate);
+		});
+
+		vscode.window.showInformationMessage(`Created XML implementation for ${methodName}`);
+	});
+
+	// 注册装饰器提供程序
+	MapperDecorationProvider.register(context);
+
+	context.subscriptions.push(generateDisposable);
+	context.subscriptions.push(jumpDisposable);
+	context.subscriptions.push(createImplementationDisposable);
 }
 
 // This method is called when your extension is deactivated

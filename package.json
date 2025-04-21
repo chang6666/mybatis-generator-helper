@@ -12,7 +12,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:mybatis.generator"
+    "onLanguage:java",
+    "onLanguage:xml",
+    "onCommand:mybatis.generate",
+    "onCommand:mybatis.jump"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -20,6 +23,31 @@
       {
         "command": "mybatis.generate",
         "title": "MyBatis: Generate"
+      },
+      {
+        "command": "mybatis.jump",
+        "title": "MyBatis: Jump to Implementation/Interface"
+      },
+      {
+        "command": "mybatis.createImplementation",
+        "title": "MyBatis: Create XML Implementation"
+      }
+    ],
+    "icons": {
+      "mybatis-jump": {
+        "description": "Jump to implementation/interface",
+        "default": {
+          "fontPath": "assets/codicon.ttf",
+          "fontCharacter": "\\ea6e"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "mybatis.jump",
+        "key": "alt+b",
+        "mac": "cmd+b",
+        "when": "editorTextFocus && (editorLangId == 'java' || editorLangId == 'xml')"
       }
     ]
   },
