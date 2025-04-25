@@ -4,12 +4,15 @@ A Visual Studio Code extension that generates MyBatis entities, mappers, and XML
 
 ## Features
 
-- Generate Java entity classes from database tables
+- Generate Java entity classes from database tables with table/column comments
 - Generate MyBatis mapper interfaces
 - Generate MyBatis XML mapping files
 - Support for MySQL databases
 - Interactive table selection
 - Customizable package names and output directories
+- Jump between Mapper interfaces and XML files
+- CodeLens support for method navigation
+- File decorations for Mapper files
 
 ## Requirements
 
@@ -30,9 +33,20 @@ A Visual Studio Code extension that generates MyBatis entities, mappers, and XML
    - Mapper interfaces in `src/main/java/<package>/mapper/`
    - XML files in `src/main/resources/mapper/`
 
+### Navigation Features
+
+- Use `Alt+B` (Windows) or `Cmd+B` (macOS) to jump between Mapper interface and XML implementation
+- Click on the CodeLens hints above mapper methods to navigate to their XML implementations
+- Use the "MyBatis: Create XML Implementation" command to generate XML snippets for new mapper methods
+
 ## Extension Settings
 
-This extension does not add any VS Code settings yet.
+This extension contributes the following settings:
+
+* `mybatisGeneratorHelper.defaultPackageName`: Default package name for generated files
+* `mybatisGeneratorHelper.templatePath`: Custom template path for code generation
+* `mybatisGeneratorHelper.indentSize`: Indentation size for generated files
+* `mybatisGeneratorHelper.namingStrategy`: Naming strategy for generated files (camelCase or snake_case)
 
 ## Known Issues
 
@@ -40,7 +54,25 @@ None reported.
 
 ## Release Notes
 
-### 0.0.6 (Current)
+### 0.0.9 (Current)
+- Added support for table and column comments in entity generation
+- Improved code generation formatting
+- Fixed file generation without auto-opening
+- Enhanced error handling and user feedback
+- Updated dependencies and improved stability
+
+### 0.0.8
+- Added custom naming strategy support
+- Improved template handling
+- Fixed Windows path issues
+- Enhanced error messages
+
+### 0.0.7
+- Added configuration options
+- Improved code generation quality
+- Fixed database connection issues
+
+### 0.0.6
 - Added jump functionality between Mapper interfaces and XML files
 - Added CodeLens support for method navigation
 - Improved error handling and logging
