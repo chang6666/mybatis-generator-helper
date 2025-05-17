@@ -47,14 +47,19 @@ This extension contributes the following settings:
 * `mybatisGeneratorHelper.templatePath`: Custom template path for code generation
 * `mybatisGeneratorHelper.indentSize`: Indentation size for generated files
 * `mybatisGeneratorHelper.namingStrategy`: Naming strategy for generated files (camelCase or snake_case)
-
-## Known Issues
-
-None reported.
+* `mybatisGeneratorHelper.tablePrefixHandling`: How to handle table prefixes: keep them, remove them, or ask each time
+* `mybatisGeneratorHelper.tablePrefix`: List of table prefixes to recognize (e.g. ['biz_', 'sys_'])
 
 ## Release Notes
 
-### 0.0.9 (Current)
+### 0.0.10 (Current)
+- Added table prefix handling options (keep/remove/ask)
+- Improved entity class generation with better comment support
+- Optimized memory usage and performance
+- Fixed database connection issues
+- Enhanced error handling and user feedback
+
+### 0.0.9
 - Added support for table and column comments in entity generation
 - Improved code generation formatting
 - Fixed file generation without auto-opening

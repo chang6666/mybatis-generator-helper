@@ -4,6 +4,8 @@ export interface ExtensionConfig {
     indentSize: number;
     databaseConfigs: import('./DatabaseConfig').DatabaseConfig[];
     namingStrategy: 'camelCase' | 'snake_case';
+    tablePrefixHandling: 'keep' | 'remove' | 'ask';
+    tablePrefix: string[];
 }
 
 export class ConfigManager {
@@ -16,7 +18,9 @@ export class ConfigManager {
             templatePath: config.get('templatePath', ''),
             indentSize: config.get('indentSize', 4),
             databaseConfigs: config.get('databaseConfigs', []),
-            namingStrategy: config.get('namingStrategy', 'camelCase')
+            namingStrategy: config.get('namingStrategy', 'camelCase'),
+            tablePrefixHandling: config.get('tablePrefixHandling', 'ask'),
+            tablePrefix: config.get('tablePrefix', [])
         };
     }
 }

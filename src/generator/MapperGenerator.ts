@@ -92,16 +92,17 @@ public interface {{className}}Mapper {
         'double': 'DOUBLE'
     };
 
-    static generateMapper(tableInfo: TableInfo, packageName: string): {
+    static generateMapper(tableInfo: TableInfo, packageName: string, removePrefix: boolean = false, prefixes: string[] = []): {
         interface: string;
         xml: string;
     } {
         const primaryKey = tableInfo.columns.find(col => col.isPrimaryKey) || tableInfo.columns[0];
         const columnList = tableInfo.columns.map(col => col.columnName).join(', ');
+        const className = this.toClassName(tableInfo.tableName, removePrefix, prefixes);
 
         const templateData = {
             packageName,
-            className: this.toClassName(tableInfo.tableName),
+            className,
             tableName: tableInfo.tableName,
             primaryKeyType: this.getJavaType(primaryKey.dataType),
             primaryKeyField: this.toCamelCase(primaryKey.columnName),
@@ -122,11 +123,36 @@ public interface {{className}}Mapper {
         };
     }
 
-    private static toClassName(tableName: string): string {
-        return tableName
+    static toClassName(tableName: string, removePrefix: boolean = false, prefixes: string[] = []): string {
+        let processedName = tableName;
+        
+        // 调试信息
+        console.log(`处理表名: ${tableName}, 移除前缀: ${removePrefix}, 前缀列表: ${prefixes.join(', ')}`);
+        
+        // 移除前缀
+        if (removePrefix && prefixes.length > 0) {
+            for (const prefix of prefixes) {
+                if (tableName.startsWith(prefix)) {
+                    processedName = tableName.substring(prefix.length);
+                    console.log(`匹配到前缀 ${prefix}, 移除后: ${processedName}`);
+                    break;
+                }
+            }
+        }
+        
+        // 确保处理后的名称不为空
+        if (processedName.length === 0) {
+            processedName = tableName;
+        }
+        
+        // 转换为PascalCase
+        const result = processedName
             .split('_')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join('');
+        
+        console.log(`最终类名: ${result}`);
+        return result;
     }
 
     private static toCamelCase(columnName: string): string {

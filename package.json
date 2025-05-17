@@ -47,7 +47,47 @@
         "mac": "cmd+b",
         "when": "editorTextFocus && (editorLangId == 'java' || editorLangId == 'xml')"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "MyBatis Generator Helper",
+      "properties": {
+        "mybatisGeneratorHelper.defaultPackageName": {
+          "type": "string",
+          "default": "com.example",
+          "description": "Default package name for generated files"
+        },
+        "mybatisGeneratorHelper.templatePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom template path for code generation"
+        },
+        "mybatisGeneratorHelper.indentSize": {
+          "type": "number",
+          "default": 4,
+          "description": "Indentation size for generated files"
+        },
+        "mybatisGeneratorHelper.namingStrategy": {
+          "type": "string",
+          "enum": ["camelCase", "snake_case"],
+          "default": "camelCase",
+          "description": "Naming strategy for generated files"
+        },
+        "mybatisGeneratorHelper.tablePrefixHandling": {
+          "type": "string",
+          "enum": ["keep", "remove", "ask"],
+          "default": "ask",
+          "description": "How to handle table prefixes: keep them, remove them, or ask each time"
+        },
+        "mybatisGeneratorHelper.tablePrefix": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of table prefixes to recognize (e.g. ['biz_', 'sys_'])"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

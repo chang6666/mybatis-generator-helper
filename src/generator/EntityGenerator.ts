@@ -51,7 +51,7 @@ public class {{className}} {
         'decimal': 'BigDecimal'
     };
 
-    static generateEntity(tableInfo: TableInfo, packageName: string): string {
+    static generateEntity(tableInfo: TableInfo, packageName: string, removePrefix: boolean = false, prefixes: string[] = []): string {
         const compiled = Handlebars.compile(this.template);
         
         const hasDate = tableInfo.columns.some(col => 
@@ -62,7 +62,7 @@ public class {{className}} {
 
         return compiled({
             packageName,
-            className: this.toClassName(tableInfo.tableName),
+            className: this.toClassName(tableInfo.tableName, removePrefix, prefixes),
             tableComment: tableInfo.tableComment?.trim(),
             hasDate,
             hasBigDecimal,
@@ -76,10 +76,36 @@ public class {{className}} {
         });
     }
 
-    private static toClassName(tableName: string): string {
-        return tableName.split('_')
+    static toClassName(tableName: string, removePrefix: boolean, prefixes: string[]): string {
+        let className = tableName;
+        
+        // 调试信息
+        console.log(`处理表名: ${tableName}, 移除前缀: ${removePrefix}, 前缀列表: ${prefixes.join(', ')}`);
+        
+        // 移除前缀
+        if (removePrefix && prefixes.length > 0) {
+            for (const prefix of prefixes) {
+                if (tableName.startsWith(prefix)) {
+                    className = tableName.substring(prefix.length);
+                    console.log(`匹配到前缀 ${prefix}, 移除后: ${className}`);
+                    break;
+                }
+            }
+        }
+        
+        // 确保处理后的名称不为空
+        if (className.length === 0) {
+            className = tableName;
+        }
+        
+        // 转换为PascalCase
+        const result = className
+            .split('_')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join('');
+        
+        console.log(`最终类名: ${result}`);
+        return result;
     }
 
     private static toCamelCase(columnName: string): string {

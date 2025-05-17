@@ -111,22 +111,67 @@ export function activate(context: vscode.ExtensionContext) {
 				await ensureDirectory(vscode.Uri.file(`${javaBasePath}/mapper`));
 				await ensureDirectory(vscode.Uri.file(`${resourcesPath}/mapper`));
 
+				// 获取配置
+				const extensionConfig = await (await import('./config/ExtensionConfig.js')).ConfigManager.getConfig();
+				
+				// 处理表前缀
+				let removePrefix = false;
+				let prefixes = extensionConfig.tablePrefix;
+				
+				// 强制显示前缀处理选项
+				vscode.window.showInformationMessage(`处理表前缀。配置设置: ${extensionConfig.tablePrefixHandling}, 前缀列表: ${prefixes.join(', ')}`);
+				
+				// 无论配置如何，始终显示选项让用户选择
+				const prefixChoice = await vscode.window.showQuickPick(
+					['保留表前缀（如sys_、biz_）', '移除表前缀（如sys_、biz_）'],
+					{ 
+						placeHolder: `如何处理表前缀？(例如: sys_, biz_, tb_)`,
+						ignoreFocusOut: true
+					}
+				);
+				
+				if (!prefixChoice) {
+					// 用户取消了选择，默认保留前缀
+					vscode.window.showInformationMessage('前缀处理已取消。默认保留前缀。');
+					removePrefix = false;
+				} else {
+					removePrefix = prefixChoice === '移除表前缀（如sys_、biz_）';
+					vscode.window.showInformationMessage(`已选择${removePrefix ? '移除' : '保留'}表前缀。`);
+				}
+				
+				// 如果用户选择了移除前缀，但没有配置前缀，提示用户添加前缀
+				if (removePrefix && prefixes.length === 0) {
+					const inputPrefix = await vscode.window.showInputBox({
+						prompt: '请输入要移除的表前缀，多个前缀用逗号分隔（例如：sys_,biz_,tb_）',
+						placeHolder: 'sys_,biz_,tb_'
+					});
+					
+					if (inputPrefix) {
+						prefixes = inputPrefix.split(',').map(p => p.trim());
+						vscode.window.showInformationMessage(`已添加前缀: ${prefixes.join(', ')}`);
+					}
+				}
+				
 				// 生成选中的所有表
 				for (const tableName of selectedTables) {
 					try {
 						// 获取表信息
 						const tableInfo = await dbService.getTableInfo(tableName);
-						const className = tableName.split('_')
-							.map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-							.join('');
+						
+						// 记录前缀处理信息
+						vscode.window.showInformationMessage(`Processing table: ${tableName}, Remove prefix: ${removePrefix}, Prefixes: ${prefixes.join(', ')}`);
+						
+						// 根据前缀设置生成类名
+						const className = EntityGenerator.toClassName(tableName, removePrefix, prefixes);
+						vscode.window.showInformationMessage(`Generated class name: ${className}`);
 						
 						// 创建实体类文件
 						const entityPath = vscode.Uri.file(`${javaBasePath}/entity/${className}.java`);
-						const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`);
+						const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`, removePrefix, prefixes);
 						await vscode.workspace.fs.writeFile(entityPath, Buffer.from(entityCode));
 
 						// 生成 Mapper 接口和 XML
-						const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName);
+						const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName, removePrefix, prefixes);
 						
 						// 创建 Mapper 接口文件
 						const mapperPath = vscode.Uri.file(`${javaBasePath}/mapper/${className}Mapper.java`);
