@@ -12,6 +12,7 @@ import { Logger } from './utils/Logger';
 import { TemplateManager } from './generator/TemplateManager';
 import { SqlFormatter } from './sql/SqlFormatter';
 import { SqlConsoleViewProvider } from './sql/SqlConsoleViewProvider';
+import { MemoryMonitor } from './utils/MemoryMonitor';
 
 async function ensureDirectory(uri: vscode.Uri): Promise<void> {
     try {
@@ -24,6 +25,9 @@ async function ensureDirectory(uri: vscode.Uri): Promise<void> {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	// 启动内存监控
+	MemoryMonitor.startMonitoring();
+
 	let generateDisposable = vscode.commands.registerCommand('mybatis.generate', async () => {
 		// 使用 Webview 获取数据库配置
 		const config = await DatabaseConfigPanel.createOrShow();
@@ -387,8 +391,22 @@ export function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export async function deactivate() {
+	// 停止内存监控
+	MemoryMonitor.stopMonitoring();
+
 	// 清理所有资源
 	await DatabaseService.closePool();
 	Logger.dispose();
 	TemplateManager.clearCache();
+	
+	// 清理任何可能的定时器
+	const sqlConsoleProvider = SqlConsoleViewProvider.getInstance();
+	if (sqlConsoleProvider) {
+		sqlConsoleProvider.dispose();
+	}
+	
+	// 清理任何可能的 WebView
+	if (DatabaseConfigPanel.currentPanel) {
+		DatabaseConfigPanel.currentPanel.dispose();
+	}
 }

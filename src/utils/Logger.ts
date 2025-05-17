@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 export class Logger {
     private static outputChannel: vscode.OutputChannel;
     // 减少日志条目限制
-    private static readonly maxLogSize = 500;
+    private static readonly maxLogSize = 100;
     // 使用循环缓冲区来存储日志
     private static logBuffer: string[] = [];
     private static currentIndex = 0;
@@ -21,7 +21,7 @@ export class Logger {
         this.addLogEntry(`[ERROR] ${message}`);
         if (error instanceof Error && error.stack) {
             // 只保存堆栈的前几行，避免过多内存使用
-            const stackLines = error.stack.split('\n').slice(0, 5).join('\n');
+            const stackLines = error.stack.split('\n').slice(0, 3).join('\n');
             this.addLogEntry(stackLines);
         }
     }
@@ -33,9 +33,17 @@ export class Logger {
         this.outputChannel.appendLine(entry);
 
         // 当日志量较大时，清理输出通道
-        if (this.currentIndex % 100 === 0) {
+        if (this.currentIndex % 50 === 0) {
             this.outputChannel.clear();
-            this.logBuffer.forEach(line => {
+            // 只显示最近的日志
+            const recentLogs = [];
+            for (let i = 0; i < this.maxLogSize; i++) {
+                const idx = (this.currentIndex + i) % this.maxLogSize;
+                if (this.logBuffer[idx]) {
+                    recentLogs.push(this.logBuffer[idx]);
+                }
+            }
+            recentLogs.forEach(line => {
                 if (line) this.outputChannel.appendLine(line);
             });
         }
@@ -49,5 +57,6 @@ export class Logger {
 
     static dispose() {
         this.outputChannel.dispose();
+        this.logBuffer = [];
     }
 }

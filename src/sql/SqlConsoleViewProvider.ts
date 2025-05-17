@@ -5,10 +5,25 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'mybatis.sqlConsole';
     private _view?: vscode.WebviewView;
     private _clipboardMonitorInterval: NodeJS.Timeout | null = null;
+    private _autoStopTimer: NodeJS.Timeout | null = null;
     private _lastClipboardContent: string = '';
-
-    constructor(private readonly _extensionUri: vscode.Uri) {}
-
+    private static _instance: SqlConsoleViewProvider | null = null;
+    
+    constructor(private readonly _extensionUri: vscode.Uri) {
+        SqlConsoleViewProvider._instance = this;
+    }
+    
+    public static getInstance(): SqlConsoleViewProvider | null {
+        return this._instance;
+    }
+    
+    // 添加 dispose 方法
+    public dispose() {
+        this.stopMonitoringClipboard();
+        this._view = undefined;
+        SqlConsoleViewProvider._instance = null;
+    }
+    
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
@@ -235,11 +250,9 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
 
     // 开始监控剪贴板
     private startMonitoringClipboard() {
-        if (this._clipboardMonitorInterval) {
-            clearInterval(this._clipboardMonitorInterval);
-        }
+        this.stopMonitoringClipboard(); // 确保先停止之前的监控
         
-        // 每秒检查一次剪贴板
+        // 减少检查频率，每2秒检查一次
         this._clipboardMonitorInterval = setInterval(async () => {
             try {
                 const clipboardContent = await vscode.env.clipboard.readText();
@@ -250,10 +263,17 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
                     
                     this._lastClipboardContent = clipboardContent;
                     
-                    // 尝试提取和格式化所有 SQL 语句
-                    const sqlStatements = this.extractMultipleSqlStatements(clipboardContent);
+                    // 限制处理的SQL语句数量
+                    const sqlStatements = this.extractMultipleSqlStatements(clipboardContent).slice(0, 5);
                     
                     if (sqlStatements.length > 0) {
+                        // 清除之前的结果，避免累积
+                        if (sqlStatements.length > 2) {
+                            this._view?.webview.postMessage({ 
+                                command: 'clearResults'
+                            });
+                        }
+                        
                         for (const sql of sqlStatements) {
                             const formattedSql = SqlFormatter.formatSql(sql);
                             this._view?.webview.postMessage({ 
@@ -266,12 +286,21 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
             } catch (error) {
                 console.error('监控剪贴板时出错:', error);
             }
-        }, 1000);
+        }, 2000); // 增加间隔到2秒
         
         this._view?.webview.postMessage({ 
             command: 'updateStatus', 
             status: '正在监控剪贴板...' 
         });
+        
+        // 设置自动停止监控的定时器（2小时后）
+        this._autoStopTimer = setTimeout(() => {
+            this.stopMonitoringClipboard();
+            this._view?.webview.postMessage({ 
+                command: 'updateStatus', 
+                status: '监控已自动停止（2小时超时）' 
+            });
+        }, 2 * 60 * 60 * 1000);
     }
     
     // 停止监控剪贴板
@@ -279,12 +308,17 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
         if (this._clipboardMonitorInterval) {
             clearInterval(this._clipboardMonitorInterval);
             this._clipboardMonitorInterval = null;
-            
-            this._view?.webview.postMessage({ 
-                command: 'updateStatus', 
-                status: '已停止监控' 
-            });
         }
+        
+        if (this._autoStopTimer) {
+            clearTimeout(this._autoStopTimer);
+            this._autoStopTimer = null;
+        }
+        
+        this._view?.webview.postMessage({ 
+            command: 'updateStatus', 
+            status: '已停止监控' 
+        });
     }
     
     // 提取多条 SQL 语句

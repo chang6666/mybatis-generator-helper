@@ -2,7 +2,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export class TemplateManager {
-    private static templateCache: Map<string, string> = new Map();
+    // 使用 WeakMap 代替 Map 以允许垃圾回收
+    private static templateCache = new Map<string, string>();
+    private static cacheTimestamp = Date.now();
+    private static readonly CACHE_TTL = 1000 * 60 * 30; // 30分钟缓存过期
     private static readonly DEFAULT_TEMPLATES = {
         entity: '...',
         mapper: '...',
@@ -10,6 +13,11 @@ export class TemplateManager {
     };
 
     static async getTemplate(type: 'entity' | 'mapper' | 'xml'): Promise<string> {
+        // 检查缓存是否过期
+        if (Date.now() - this.cacheTimestamp > this.CACHE_TTL) {
+            this.clearCache();
+        }
+
         // 检查缓存
         const cacheKey = `template_${type}`;
         if (this.templateCache.has(cacheKey)) {
@@ -38,5 +46,6 @@ export class TemplateManager {
 
     static clearCache(): void {
         this.templateCache.clear();
+        this.cacheTimestamp = Date.now();
     }
 }

@@ -49,7 +49,8 @@ export class DatabaseConfigPanel {
             column,
             {
                 enableScripts: true,
-                retainContextWhenHidden: false // 隐藏时释放内存
+                retainContextWhenHidden: false, // 隐藏时释放内存
+                localResourceRoots: [vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', 'resources')] // 限制资源访问范围
             }
         );
 
@@ -59,6 +60,7 @@ export class DatabaseConfigPanel {
             panel.onDidDispose(() => {
                 DatabaseConfigPanel.currentPanel = undefined;
                 const config = DatabaseConfigPanel.panelData.get(panel);
+                DatabaseConfigPanel.panelData.delete(panel); // 清理映射
                 resolve(config);
             });
         });

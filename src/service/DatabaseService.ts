@@ -31,16 +31,16 @@ export class DatabaseService {
             database: config.database,
             waitForConnections: true,
             // 减少最大连接数
-            connectionLimit: 5,
+            connectionLimit: 3,
             // 减少空闲连接数
-            maxIdle: 3,
+            maxIdle: 1,
             // 减少空闲超时时间
-            idleTimeout: 30000,
+            idleTimeout: 10000,
             // 启用连接复用
             enableKeepAlive: true,
             keepAliveInitialDelay: 30000,
             // 添加资源限制
-            queueLimit: 5
+            queueLimit: 3
         });
 
         try {
