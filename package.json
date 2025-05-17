@@ -29,6 +29,14 @@
       {
         "command": "mybatis.createImplementation",
         "title": "MyBatis: Create XML Implementation"
+      },
+      {
+        "command": "mybatis.formatSql",
+        "title": "MyBatis: Format SQL from Log"
+      },
+      {
+        "command": "mybatis.jumpToMethod",
+        "title": "MyBatis: Jump to Method Implementation/Interface"
       }
     ],
     "icons": {
@@ -45,6 +53,12 @@
         "command": "mybatis.jump",
         "key": "alt+b",
         "mac": "cmd+b",
+        "when": "editorTextFocus && (editorLangId == 'java' || editorLangId == 'xml')"
+      },
+      {
+        "command": "mybatis.jumpToMethod",
+        "key": "alt+m",
+        "mac": "cmd+m",
         "when": "editorTextFocus && (editorLangId == 'java' || editorLangId == 'xml')"
       }
     ],
@@ -87,12 +101,39 @@
           "description": "List of table prefixes to recognize (e.g. ['biz_', 'sys_'])"
         }
       }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mybatis.formatSql",
+          "when": "editorTextFocus",
+          "group": "mybatis"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "mybatisHelper",
+          "title": "MyBatis Helper",
+          "icon": "$(database)"
+        }
+      ]
+    },
+    "views": {
+      "mybatisHelper": [
+        {
+          "type": "webview",
+          "id": "mybatis.sqlConsole",
+          "name": "SQL 格式化器"
+        }
+      ]
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "node build.js",
+    "compile": "node build.js",
+    "watch": "node build.js --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"

@@ -30,7 +30,8 @@ export class MapperDecorationProvider {
                                     if (MapperDecorationProvider.hasMethodImplementation(xmlContent, methodName)) {
                                         codeLenses.push(new vscode.CodeLens(range, {
                                             title: "$(arrow-right) Go to XML implementation",
-                                            command: 'mybatis.jump'
+                                            command: 'mybatis.jumpToMethod',  // 使用方法级跳转命令
+                                            arguments: [methodName]  // 传递方法名作为参数
                                         }));
                                     } else {
                                         // 如果没有实现，显示创建建议
@@ -46,7 +47,7 @@ export class MapperDecorationProvider {
                     }
                 }
             } else if (document.languageId === 'xml') {
-                // XML 部分的代码保持不变
+                // XML 部分的代码
                 const text = document.getText();
                 const namespaceMatch = text.match(/namespace="([^"]+)"/);
                 if (namespaceMatch) {
@@ -60,10 +61,12 @@ export class MapperDecorationProvider {
                 const sqlRegex = /<(select|insert|update|delete)\s+id="([^"]+)"/g;
                 let match;
                 while ((match = sqlRegex.exec(text)) !== null) {
+                    const methodName = match[2];
                     const range = document.lineAt(document.positionAt(match.index!)).range;
                     codeLenses.push(new vscode.CodeLens(range, {
                         title: "$(arrow-left) Go to Interface method",
-                        command: 'mybatis.jump'
+                        command: 'mybatis.jumpToMethod',  // 使用方法级跳转命令
+                        arguments: [methodName]  // 传递方法名作为参数
                     }));
                 }
             }

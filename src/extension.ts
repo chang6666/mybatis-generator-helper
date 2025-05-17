@@ -10,6 +10,8 @@ import { MapperJumper } from './jump/MapperJumper';
 import { MapperDecorationProvider } from './decoration/MapperDecorationProvider';
 import { Logger } from './utils/Logger';
 import { TemplateManager } from './generator/TemplateManager';
+import { SqlFormatter } from './sql/SqlFormatter';
+import { SqlConsoleViewProvider } from './sql/SqlConsoleViewProvider';
 
 async function ensureDirectory(uri: vscode.Uri): Promise<void> {
     try {
@@ -219,6 +221,10 @@ export function activate(context: vscode.ExtensionContext) {
 		await MapperJumper.jump();
 	});
 
+	let jumpToMethodDisposable = vscode.commands.registerCommand('mybatis.jumpToMethod', async (methodName?: string) => {
+		await MapperJumper.jumpToMethod(methodName);
+	});
+
 	// 注册创建XML实现的命令
 	let createImplementationDisposable = vscode.commands.registerCommand('mybatis.createImplementation', async (methodName: string, interfaceName: string) => {
 		// 如果没有活动编辑器，尝试通过接口名称查找文件
@@ -359,9 +365,24 @@ export function activate(context: vscode.ExtensionContext) {
 		})
 	);
 
+	let formatSqlDisposable = vscode.commands.registerCommand('mybatis.formatSql', async () => {
+		await SqlFormatter.formatSqlFromClipboard();
+	});
+
+	// 注册 SQL 控制台视图提供者
+	const sqlConsoleViewProvider = new SqlConsoleViewProvider(context.extensionUri);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(
+			SqlConsoleViewProvider.viewType,
+			sqlConsoleViewProvider
+		)
+	);
+
 	context.subscriptions.push(generateDisposable);
 	context.subscriptions.push(jumpDisposable);
+	context.subscriptions.push(jumpToMethodDisposable);
 	context.subscriptions.push(createImplementationDisposable);
+	context.subscriptions.push(formatSqlDisposable);
 }
 
 // This method is called when your extension is deactivated
