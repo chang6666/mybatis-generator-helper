@@ -75,13 +75,23 @@ export class MapperDecorationProvider {
     private static readonly _decorationProvider = new class implements vscode.FileDecorationProvider {
         private readonly _onDidChangeFileDecorations = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
         readonly onDidChangeFileDecorations = this._onDidChangeFileDecorations.event;
+        private decoratedFiles = new Set<string>();
 
         provideFileDecoration(uri: vscode.Uri): vscode.ProviderResult<vscode.FileDecoration> {
-            const isMapper = uri.path.endsWith('Mapper.java') || uri.path.endsWith('Mapper.xml');
+            const path = uri.path;
+            const isMapper = path.endsWith('Mapper.java') || path.endsWith('Mapper.xml');
+            
             if (!isMapper) {
+                // 如果之前装饰过但现在不需要，从集合中移除
+                if (this.decoratedFiles.has(path)) {
+                    this.decoratedFiles.delete(path);
+                }
                 return undefined;
             }
 
+            // 添加到已装饰文件集合
+            this.decoratedFiles.add(path);
+            
             return {
                 badge: '↔',
                 tooltip: 'Click to jump to implementation/interface',

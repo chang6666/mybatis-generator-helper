@@ -51,8 +51,14 @@ public class {{className}} {
         'decimal': 'BigDecimal'
     };
 
+    // 使用单例模式减少模板编译次数
+    private static compiledTemplate: HandlebarsTemplateDelegate | null = null;
+
     static generateEntity(tableInfo: TableInfo, packageName: string, removePrefix: boolean = false, prefixes: string[] = []): string {
-        const compiled = Handlebars.compile(this.template);
+        // 只在第一次使用时编译模板
+        if (!this.compiledTemplate) {
+            this.compiledTemplate = Handlebars.compile(this.template);
+        }
         
         const hasDate = tableInfo.columns.some(col => 
             ['datetime', 'timestamp'].includes(col.dataType.toLowerCase()));
@@ -60,7 +66,8 @@ public class {{className}} {
         const hasBigDecimal = tableInfo.columns.some(col => 
             ['decimal'].includes(col.dataType.toLowerCase()));
 
-        return compiled({
+        // 重用类型映射，避免重复创建对象
+        return this.compiledTemplate({
             packageName,
             className: this.toClassName(tableInfo.tableName, removePrefix, prefixes),
             tableComment: tableInfo.tableComment?.trim(),

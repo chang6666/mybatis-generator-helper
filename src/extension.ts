@@ -152,40 +152,49 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 				
-				// 生成选中的所有表
-				for (const tableName of selectedTables) {
-					try {
-						// 获取表信息
-						const tableInfo = await dbService.getTableInfo(tableName);
-						
-						// 记录前缀处理信息
-						vscode.window.showInformationMessage(`Processing table: ${tableName}, Remove prefix: ${removePrefix}, Prefixes: ${prefixes.join(', ')}`);
-						
-						// 根据前缀设置生成类名
-						const className = EntityGenerator.toClassName(tableName, removePrefix, prefixes);
-						vscode.window.showInformationMessage(`Generated class name: ${className}`);
-						
-						// 创建实体类文件
-						const entityPath = vscode.Uri.file(`${javaBasePath}/entity/${className}.java`);
-						const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`, removePrefix, prefixes);
-						await vscode.workspace.fs.writeFile(entityPath, Buffer.from(entityCode));
+				// 批量生成文件，减少I/O操作
+				async function generateFiles(selectedTables: string[], dbService: DatabaseService, 
+											javaBasePath: string, resourcesPath: string, 
+											packageName: string, removePrefix: boolean, prefixes: string[]) {
+					// 准备所有文件操作
+					const fileOperations: Array<{uri: vscode.Uri, content: Buffer}> = [];
+					
+					for (const tableName of selectedTables) {
+						try {
+							// 获取表信息
+							const tableInfo = await dbService.getTableInfo(tableName);
+							
+							// 根据前缀设置生成类名
+							const className = EntityGenerator.toClassName(tableName, removePrefix, prefixes);
+							
+							// 创建实体类文件
+							const entityPath = vscode.Uri.file(`${javaBasePath}/entity/${className}.java`);
+							const entityCode = EntityGenerator.generateEntity(tableInfo, `${packageName}.entity`, removePrefix, prefixes);
+							fileOperations.push({uri: entityPath, content: Buffer.from(entityCode)});
 
-						// 生成 Mapper 接口和 XML
-						const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName, removePrefix, prefixes);
-						
-						// 创建 Mapper 接口文件
-						const mapperPath = vscode.Uri.file(`${javaBasePath}/mapper/${className}Mapper.java`);
-						await vscode.workspace.fs.writeFile(mapperPath, Buffer.from(mapperCode.interface));
+							// 生成 Mapper 接口和 XML
+							const mapperCode = MapperGenerator.generateMapper(tableInfo, packageName, removePrefix, prefixes);
+							
+							// 创建 Mapper 接口文件
+							const mapperPath = vscode.Uri.file(`${javaBasePath}/mapper/${className}Mapper.java`);
+							fileOperations.push({uri: mapperPath, content: Buffer.from(mapperCode.interface)});
 
-						// 创建 Mapper XML 文件
-						const xmlPath = vscode.Uri.file(`${resourcesPath}/mapper/${className}Mapper.xml`);
-						await vscode.workspace.fs.writeFile(xmlPath, Buffer.from(mapperCode.xml));
-
-						vscode.window.showInformationMessage(`Generated files for table ${tableName}`);
-					} catch (error: unknown) {
-						vscode.window.showErrorMessage(`Error generating code for table ${tableName}: ${(error as Error).message}`);
+							// 创建 Mapper XML 文件
+							const xmlPath = vscode.Uri.file(`${resourcesPath}/mapper/${className}Mapper.xml`);
+							fileOperations.push({uri: xmlPath, content: Buffer.from(mapperCode.xml)});
+						} catch (error: unknown) {
+							vscode.window.showErrorMessage(`Error generating code for table ${tableName}: ${(error as Error).message}`);
+						}
+					}
+					
+					// 批量执行文件写入操作
+					for (const op of fileOperations) {
+						await vscode.workspace.fs.writeFile(op.uri, op.content);
 					}
 				}
+
+				// 生成选中的所有表
+				await generateFiles(selectedTables, dbService, javaBasePath, resourcesPath, packageName, removePrefix, prefixes);
 
 				// 在所有文件生成完成后显示一个总结消息
 				vscode.window.showInformationMessage(
