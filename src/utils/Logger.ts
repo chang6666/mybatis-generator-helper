@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 export class Logger {
     private static outputChannel: vscode.OutputChannel;
     // 减少日志条目限制
-    private static readonly maxLogSize = 100;
+    private static readonly maxLogSize = 50;
     // 使用循环缓冲区来存储日志
     private static logBuffer: string[] = [];
     private static currentIndex = 0;
@@ -21,7 +21,7 @@ export class Logger {
         this.addLogEntry(`[ERROR] ${message}`);
         if (error instanceof Error && error.stack) {
             // 只保存堆栈的前几行，避免过多内存使用
-            const stackLines = error.stack.split('\n').slice(0, 3).join('\n');
+            const stackLines = error.stack.split('\n').slice(0, 2).join('\n');
             this.addLogEntry(stackLines);
         }
     }
@@ -33,7 +33,7 @@ export class Logger {
         this.outputChannel.appendLine(entry);
 
         // 当日志量较大时，清理输出通道
-        if (this.currentIndex % 50 === 0) {
+        if (this.currentIndex % 25 === 0) {
             this.outputChannel.clear();
             // 只显示最近的日志
             const recentLogs = [];

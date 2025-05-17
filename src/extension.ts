@@ -25,9 +25,34 @@ async function ensureDirectory(uri: vscode.Uri): Promise<void> {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	// 启动内存监控
-	MemoryMonitor.startMonitoring();
+	// 启动内存监控，设置极低的阈值
+	MemoryMonitor.startMonitoring(30); // 设置30MB阈值
 
+	// 添加更频繁的内存优化
+	const memoryOptimizationInterval = setInterval(() => {
+		MemoryMonitor.optimizeMemory(true); // 使用激进优化
+	}, 5 * 60 * 1000); // 每5分钟优化一次
+	
+	// 将定时器添加到订阅中以便正确清理
+	context.subscriptions.push({ dispose: () => clearInterval(memoryOptimizationInterval) });
+	
+	// 添加内存警告通知
+	const memoryWarningInterval = setInterval(() => {
+		const memoryInfo = MemoryMonitor.getMemoryUsage();
+		if (memoryInfo.current > 100) { // 如果内存超过100MB，显示警告
+			vscode.window.showWarningMessage(
+				`高内存使用警告: ${memoryInfo.current}MB，点击优化内存`,
+				'优化内存'
+			).then(selection => {
+				if (selection === '优化内存') {
+					MemoryMonitor.optimizeMemory(true);
+				}
+			});
+		}
+	}, 10 * 60 * 1000); // 每10分钟检查一次
+	
+	context.subscriptions.push({ dispose: () => clearInterval(memoryWarningInterval) });
+	
 	let generateDisposable = vscode.commands.registerCommand('mybatis.generate', async () => {
 		// 使用 Webview 获取数据库配置
 		const config = await DatabaseConfigPanel.createOrShow();
@@ -382,11 +407,25 @@ export function activate(context: vscode.ExtensionContext) {
 		)
 	);
 
+	let showMemoryUsageDisposable = vscode.commands.registerCommand('mybatis.showMemoryUsage', async () => {
+		const memoryInfo = MemoryMonitor.getMemoryUsage();
+		vscode.window.showInformationMessage(
+			`内存使用情况: 当前 ${memoryInfo.current}MB, 平均 ${memoryInfo.average}MB, 最大 ${memoryInfo.max}MB`,
+			'优化内存'
+		).then(selection => {
+			if (selection === '优化内存') {
+				MemoryMonitor.optimizeMemory();
+				vscode.window.showInformationMessage('已尝试优化内存使用');
+			}
+		});
+	});
+
 	context.subscriptions.push(generateDisposable);
 	context.subscriptions.push(jumpDisposable);
 	context.subscriptions.push(jumpToMethodDisposable);
 	context.subscriptions.push(createImplementationDisposable);
 	context.subscriptions.push(formatSqlDisposable);
+	context.subscriptions.push(showMemoryUsageDisposable);
 }
 
 // This method is called when your extension is deactivated
@@ -406,7 +445,7 @@ export async function deactivate() {
 	}
 	
 	// 清理任何可能的 WebView
-	if (DatabaseConfigPanel.currentPanel) {
-		DatabaseConfigPanel.currentPanel.dispose();
+	if (DatabaseConfigPanel.getCurrentPanel()) {
+		DatabaseConfigPanel.disposePanel();
 	}
 }

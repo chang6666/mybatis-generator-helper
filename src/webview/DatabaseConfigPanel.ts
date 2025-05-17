@@ -66,6 +66,17 @@ export class DatabaseConfigPanel {
         });
     }
 
+    public static getCurrentPanel(): DatabaseConfigPanel | undefined {
+        return DatabaseConfigPanel.currentPanel;
+    }
+
+    public static disposePanel(): void {
+        if (DatabaseConfigPanel.currentPanel) {
+            DatabaseConfigPanel.currentPanel.dispose();
+            DatabaseConfigPanel.currentPanel = undefined;
+        }
+    }
+
     private static getHtmlContent() {
         return `<!DOCTYPE html>
         <html lang="en">

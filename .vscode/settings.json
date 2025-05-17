@@ -22,5 +22,13 @@
 	"codegraphy.selectedD3Color": "Spectral",
 	"codegraphy.selectedNodeColor": "#fff",
 	"codegraphy.favoriteNodeColor": "#ffd700",
-	"codegraphy.outlineColor": "#ffd700"
+	"codegraphy.outlineColor": "#ffd700",
+	"typescript.tsserver.maxTsServerMemory": 512,
+	"typescript.tsserver.useSeparateSyntaxServer": true,
+	"typescript.tsserver.watchOptions": {
+		"watchFile": "useFsEvents",
+		"watchDirectory": "useFsEvents",
+		"fallbackPolling": "dynamicPriority"
+	},
+	"js/ts.implicitProjectConfig.checkJs": false
 }

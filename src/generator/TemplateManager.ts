@@ -5,7 +5,7 @@ export class TemplateManager {
     // 使用 WeakMap 代替 Map 以允许垃圾回收
     private static templateCache = new Map<string, string>();
     private static cacheTimestamp = Date.now();
-    private static readonly CACHE_TTL = 1000 * 60 * 30; // 30分钟缓存过期
+    private static readonly CACHE_TTL = 1000 * 60 * 10; // 减少到10分钟缓存过期
     private static readonly DEFAULT_TEMPLATES = {
         entity: '...',
         mapper: '...',
@@ -38,13 +38,16 @@ export class TemplateManager {
         } else {
             template = this.DEFAULT_TEMPLATES[type];
         }
-
-        // 缓存模板
-        this.templateCache.set(cacheKey, template);
+        
+        // 只缓存小于一定大小的模板
+        if (template.length < 10000) {
+            this.templateCache.set(cacheKey, template);
+        }
+        
         return template;
     }
 
-    static clearCache(): void {
+    static clearCache() {
         this.templateCache.clear();
         this.cacheTimestamp = Date.now();
     }

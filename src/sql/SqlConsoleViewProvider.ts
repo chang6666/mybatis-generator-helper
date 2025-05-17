@@ -252,7 +252,7 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
     private startMonitoringClipboard() {
         this.stopMonitoringClipboard(); // 确保先停止之前的监控
         
-        // 减少检查频率，每2秒检查一次
+        // 减少检查频率，每3秒检查一次
         this._clipboardMonitorInterval = setInterval(async () => {
             try {
                 const clipboardContent = await vscode.env.clipboard.readText();
@@ -264,11 +264,11 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
                     this._lastClipboardContent = clipboardContent;
                     
                     // 限制处理的SQL语句数量
-                    const sqlStatements = this.extractMultipleSqlStatements(clipboardContent).slice(0, 5);
+                    const sqlStatements = this.extractMultipleSqlStatements(clipboardContent).slice(0, 3);
                     
                     if (sqlStatements.length > 0) {
                         // 清除之前的结果，避免累积
-                        if (sqlStatements.length > 2) {
+                        if (sqlStatements.length > 1) {
                             this._view?.webview.postMessage({ 
                                 command: 'clearResults'
                             });
@@ -286,21 +286,21 @@ export class SqlConsoleViewProvider implements vscode.WebviewViewProvider {
             } catch (error) {
                 console.error('监控剪贴板时出错:', error);
             }
-        }, 2000); // 增加间隔到2秒
+        }, 3000); // 增加间隔到3秒
         
         this._view?.webview.postMessage({ 
             command: 'updateStatus', 
             status: '正在监控剪贴板...' 
         });
         
-        // 设置自动停止监控的定时器（2小时后）
+        // 设置自动停止监控的定时器（1小时后）
         this._autoStopTimer = setTimeout(() => {
             this.stopMonitoringClipboard();
             this._view?.webview.postMessage({ 
                 command: 'updateStatus', 
-                status: '监控已自动停止（2小时超时）' 
+                status: '监控已自动停止（1小时超时）' 
             });
-        }, 2 * 60 * 60 * 1000);
+        }, 1 * 60 * 60 * 1000);
     }
     
     // 停止监控剪贴板

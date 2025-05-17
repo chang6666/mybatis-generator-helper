@@ -41,12 +41,43 @@ const config = {
         terserOptions: {
           ecma: 2020,
           compress: {
-            passes: 2
+            passes: 3,
+            drop_console: true,
+            drop_debugger: true,
+            pure_getters: true,
+            unsafe: true,
+            unsafe_comps: true,
+            unsafe_math: true,
+            unsafe_methods: true
           },
-          mangle: true
+          mangle: true,
+          output: {
+            comments: false
+          }
         }
       })
-    ]
+    ],
+    splitChunks: {
+      chunks: 'all',
+      minSize: 30000,
+      maxSize: 0,
+      minChunks: 1,
+      maxAsyncRequests: 5,
+      maxInitialRequests: 3,
+      automaticNameDelimiter: '~',
+      name: false,
+      cacheGroups: {
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          priority: -10
+        },
+        default: {
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true
+        }
+      }
+    }
   }
 };
 

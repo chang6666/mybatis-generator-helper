@@ -37,6 +37,10 @@
       {
         "command": "mybatis.jumpToMethod",
         "title": "MyBatis: Jump to Method Implementation/Interface"
+      },
+      {
+        "command": "mybatis.showMemoryUsage",
+        "title": "MyBatis: Show Memory Usage"
       }
     ],
     "icons": {
