@@ -14,7 +14,7 @@ A Visual Studio Code extension that generates MyBatis entities, mappers, and XML
 - CodeLens support for method navigation
 - File decorations for Mapper files
 - SQL formatting from logs
-- Memory usage optimization
+- Table prefix handling (keep or remove)
 
 ## Requirements
 
@@ -61,12 +61,16 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.1.0 (Current)
-- Added SQL formatting from logs
-- Added memory usage optimization
+### 0.1.1 (Current)
 - Added table prefix handling options (keep/remove/ask)
 - Improved entity class generation with better comment support
-- Optimized memory usage and performance
+- Removed memory usage monitoring and logging for better performance
+- Fixed database connection issues
+- Enhanced error handling and user feedback
+
+### 0.1.0
+- Added SQL formatting from logs
+- Improved entity class generation with better comment support
 - Fixed database connection issues
 - Enhanced error handling and user feedback
 
