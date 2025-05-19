@@ -11,6 +11,8 @@ export class MemoryMonitor {
     private static readonly MAX_MEMORY_ALLOWED = 300; // 提高最大允许内存
     private static readonly HEAP_DUMP_THRESHOLD = 500; // 触发堆转储的阈值
     private static heapDumpTaken = false; // 是否已经生成堆转储
+
+    
     
     static startMonitoring(thresholdMB?: number) {
         if (this.interval) {

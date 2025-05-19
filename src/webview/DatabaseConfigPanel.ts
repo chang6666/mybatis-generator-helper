@@ -266,14 +266,12 @@ export class DatabaseConfigPanel {
         }
     }
 
-    public dispose() {
-        DatabaseConfigPanel.currentPanel = undefined;
-        this._panel.dispose();
-        while (this._disposables.length) {
-            const disposable = this._disposables.pop();
-            if (disposable) {
-                disposable.dispose();
-            }
-        }
+// DatabaseConfigPanel.ts
+public dispose() {
+    this._panel.dispose();
+    while (this._disposables.length) {
+        const disposable = this._disposables.pop();
+        if (disposable) disposable.dispose();
     }
+}
 }

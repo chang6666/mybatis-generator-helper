@@ -1,6 +1,7 @@
 import * as Handlebars from 'handlebars';
 import { TableInfo, TableColumn } from '../service/DatabaseService';
 
+
 export class EntityGenerator {
     private static template = `
 package {{packageName}};

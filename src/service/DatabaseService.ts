@@ -1,6 +1,7 @@
 import * as mysql from 'mysql2/promise';
 import { DatabaseConfig } from '../config/DatabaseConfig';
 
+
 export interface TableColumn {
     columnName: string;
     dataType: string;
@@ -19,10 +20,7 @@ export class DatabaseService {
     private connection: mysql.PoolConnection | null = null;
 
     static async initializePool(config: DatabaseConfig): Promise<void> {
-        if (this.pool) {
-            await this.closePool();
-        }
-        
+        if (this.pool) await this.pool.end(); // 确保关闭旧连接池
         this.pool = mysql.createPool({
             host: config.host,
             port: config.port,
@@ -30,26 +28,12 @@ export class DatabaseService {
             password: config.password,
             database: config.database,
             waitForConnections: true,
-            // 减少最大连接数
-            connectionLimit: 2,
-            // 减少空闲连接数
-            maxIdle: 1,
-            // 减少空闲超时时间
-            idleTimeout: 5000,
-            // 启用连接复用
-            enableKeepAlive: true,
-            keepAliveInitialDelay: 30000,
-            // 添加资源限制
-            queueLimit: 2
+            connectionLimit: 1, // 减少到 1
+            maxIdle: 0,         // 空闲连接数为 0
+            idleTimeout: 3000,  // 更短的空闲超时时间
+            enableKeepAlive: false, // 关闭保持连接
+            queueLimit: 1       // 最大排队请求减少
         });
-
-        try {
-            const conn = await this.pool.getConnection();
-            conn.release();
-        } catch (error) {
-            await this.closePool();
-            throw error;
-        }
     }
 
     async connect(): Promise<void> {

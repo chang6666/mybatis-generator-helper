@@ -8,6 +8,22 @@ export class Logger {
     private static logBuffer: string[] = [];
     private static currentIndex = 0;
 
+    // Logger.ts
+    private static logQueue: string[] = [];
+    private static flushTimeout: NodeJS.Timeout | null = null;
+
+    private static addLogEntry(entry: string) {
+        this.logQueue.push(entry);
+
+        if (!this.flushTimeout) {
+            this.flushTimeout = setTimeout(() => {
+                this.outputChannel.append(this.logQueue.join('\n') + '\n');
+                this.logQueue = [];
+                this.flushTimeout = null;
+            }, 100); // 批量写入
+        }
+    }
+
     static {
         this.outputChannel = vscode.window.createOutputChannel('MyBatis Generator');
     }
@@ -23,29 +39,6 @@ export class Logger {
             // 只保存堆栈的前几行，避免过多内存使用
             const stackLines = error.stack.split('\n').slice(0, 2).join('\n');
             this.addLogEntry(stackLines);
-        }
-    }
-
-    private static addLogEntry(entry: string) {
-        // 使用循环缓冲区
-        this.logBuffer[this.currentIndex] = entry;
-        this.currentIndex = (this.currentIndex + 1) % this.maxLogSize;
-        this.outputChannel.appendLine(entry);
-
-        // 当日志量较大时，清理输出通道
-        if (this.currentIndex % 25 === 0) {
-            this.outputChannel.clear();
-            // 只显示最近的日志
-            const recentLogs = [];
-            for (let i = 0; i < this.maxLogSize; i++) {
-                const idx = (this.currentIndex + i) % this.maxLogSize;
-                if (this.logBuffer[idx]) {
-                    recentLogs.push(this.logBuffer[idx]);
-                }
-            }
-            recentLogs.forEach(line => {
-                if (line) this.outputChannel.appendLine(line);
-            });
         }
     }
 

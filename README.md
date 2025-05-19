@@ -1,4 +1,4 @@
-# MyBatis Generator Extension
+# MyBatis Generator Helper
 
 A Visual Studio Code extension that generates MyBatis entities, mappers, and XML files from your database schema.
 
@@ -13,12 +13,14 @@ A Visual Studio Code extension that generates MyBatis entities, mappers, and XML
 - Jump between Mapper interfaces and XML files
 - CodeLens support for method navigation
 - File decorations for Mapper files
+- SQL formatting from logs
+- Memory usage optimization
 
 ## Requirements
 
 - Java Development Kit (JDK) installed
 - MySQL database
-- Visual Studio Code 1.99.0 or higher
+- Visual Studio Code 1.19.0 or higher
 
 ## Usage
 
@@ -36,8 +38,15 @@ A Visual Studio Code extension that generates MyBatis entities, mappers, and XML
 ### Navigation Features
 
 - Use `Alt+B` (Windows) or `Cmd+B` (macOS) to jump between Mapper interface and XML implementation
+- Use `Alt+M` (Windows) or `Cmd+M` (macOS) to jump to specific method implementations
 - Click on the CodeLens hints above mapper methods to navigate to their XML implementations
 - Use the "MyBatis: Create XML Implementation" command to generate XML snippets for new mapper methods
+
+### SQL Formatting
+
+- Use the "MyBatis: Format SQL from Log" command to format SQL statements from logs
+- Right-click on SQL text and select "MyBatis: Format SQL" from the context menu
+- View formatted SQL in the MyBatis Helper panel
 
 ## Extension Settings
 
@@ -52,7 +61,9 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.0.10 (Current)
+### 0.1.0 (Current)
+- Added SQL formatting from logs
+- Added memory usage optimization
 - Added table prefix handling options (keep/remove/ask)
 - Improved entity class generation with better comment support
 - Optimized memory usage and performance

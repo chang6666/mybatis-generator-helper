@@ -12,6 +12,18 @@ export class TemplateManager {
         xml: '...'
     };
 
+    // TemplateManager.ts
+    private static readonly MAX_CACHE_SIZE = 5; // 根据实际需求设置较小的值
+
+    static clearCache() {
+        if (this.templateCache.size > this.MAX_CACHE_SIZE) {
+            const keys = Array.from(this.templateCache.keys());
+            for (let i = 0; i < keys.length - this.MAX_CACHE_SIZE; i++) {
+                this.templateCache.delete(keys[i]);
+            }
+        }
+    }
+
     static async getTemplate(type: 'entity' | 'mapper' | 'xml'): Promise<string> {
         // 检查缓存是否过期
         if (Date.now() - this.cacheTimestamp > this.CACHE_TTL) {
@@ -38,17 +50,12 @@ export class TemplateManager {
         } else {
             template = this.DEFAULT_TEMPLATES[type];
         }
-        
+
         // 只缓存小于一定大小的模板
         if (template.length < 10000) {
             this.templateCache.set(cacheKey, template);
         }
-        
-        return template;
-    }
 
-    static clearCache() {
-        this.templateCache.clear();
-        this.cacheTimestamp = Date.now();
+        return template;
     }
 }
